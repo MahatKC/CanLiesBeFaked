@@ -162,23 +162,15 @@ hyperparameters = {
     'network': ['slowfast_4x16_resnet50_kinetics400', 'slowfast_4x16_resnet50_custom', 'slowfast_8x8_resnet50_kinetics400']
 }
 
-execution_id = 67
+
+execution_id = 69
 train_data, val_data = load_train_val(64)
 network = 'slowfast_4x16_resnet50_kinetics400'
-lr_decay_strategy = hyperparameters['lr_decay_strategy'][-1]
-chosen_optimizer = 'rmsprop'
+lr_decay_strategy = hyperparameters['lr_decay_strategy'][4]
+chosen_optimizer = 'sgd'
 weight_decay = 0.0001
 num_epochs = 200
-lr = 0.001
-train_network(execution_id, ctx, network, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay)
-ctx[0].empty_cache()
-gc.collect() 
-execution_id += 1
-
-network = 'slowfast_8x8_resnet50_kinetics400'
-train_data, val_data = load_train_val(128)
-chosen_optimizer = 'sgd'
-lr = 0.005
+lr = 0.0005
 train_network(execution_id, ctx, network, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay)
 ctx[0].empty_cache()
 gc.collect() 
