@@ -1,8 +1,9 @@
-/Real-life_Deception_Detection_2016
+/Real-life_Deception_Detection_2016/Annotation
+/Real-life_Deception_Detection_2016/Clips
+/Real-life_Deception_Detection_2016/Transcription
 /first_gluon_test.py
 /first_train_test.ipynb
 /hyperparameter_search.csv
 /runs
-/test.txt
-/train.txt
-/val.txt
+*.txt
+*.ods

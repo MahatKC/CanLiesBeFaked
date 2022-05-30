@@ -156,52 +156,29 @@ batch_size = per_device_batch_size * num_gpus
 
 hyperparameters = {
     'learning_rate' : [0.005, 0.001, 0.0005, 0.0001],
-    'lr_decay_strategy': [[10, 20, 30, 40, 50, 60, 70, 80, 90, 100], [40, 80, 100], [20, 40, 60, 80, 100], [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200], [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 300]],
+    'lr_decay_strategy': [[10, 20, 30, 40, 50, 60, 70, 80, 90, 100], [40, 80, 100], [20, 40, 60, 80, 100], [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200], [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 300], [40, 80, 100, 300]],
     'optimizer': ['sgd', 'adam', 'rmsprop'],
     'wd': [0.001, 0.0001],
     'network': ['slowfast_4x16_resnet50_kinetics400', 'slowfast_4x16_resnet50_custom', 'slowfast_8x8_resnet50_kinetics400']
 }
 
-train_data, val_data = load_train_val(128)
-execution_id = 28
-network = 'slowfast_8x8_resnet50_kinetics400'
-num_epochs = 100
-lr_decay_strategy = hyperparameters['lr_decay_strategy'][0]
-chosen_optimizer = 'sgd'
+execution_id = 67
+train_data, val_data = load_train_val(64)
+network = 'slowfast_4x16_resnet50_kinetics400'
+lr_decay_strategy = hyperparameters['lr_decay_strategy'][-1]
+chosen_optimizer = 'rmsprop'
 weight_decay = 0.0001
-
-for lr in [0.001, 0.0005]:
-    train_network(execution_id, ctx, network, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay)
-    ctx[0].empty_cache()
-    gc.collect() 
-    execution_id += 1
-
-learning_rate = 0.005
-lr_decay_strategy = hyperparameters['lr_decay_strategy'][1]
-train_network(execution_id, ctx, network, num_epochs, lr_decay_strategy, chosen_optimizer, learning_rate, weight_decay)
+num_epochs = 200
+lr = 0.001
+train_network(execution_id, ctx, network, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay)
 ctx[0].empty_cache()
 gc.collect() 
 execution_id += 1
 
-train_data, val_data = load_train_val(64)
-network = 'slowfast_4x16_resnet50_kinetics400'
-
-for lr_decay_strategy in hyperparameters['lr_decay_strategy'][:2]:
-    for chosen_optimizer in hyperparameters['optimizer'][1:]:
-        for lr in hyperparameters['learning_rate']:
-            for wd in hyperparameters['wd']:
-                train_network(execution_id, ctx, network, num_epochs, lr_decay_strategy, chosen_optimizer, lr, wd)
-                ctx[0].empty_cache()
-                gc.collect() 
-                execution_id += 1
-
-lr_decay_strategy = hyperparameters['lr_decay_strategy'][2]
+network = 'slowfast_8x8_resnet50_kinetics400'
+train_data, val_data = load_train_val(128)
 chosen_optimizer = 'sgd'
-weight_decay = 0.0001
-num_epochs = 200
-for decay_strat in hyperparameters['lr_decay_strategy'][3:]:
-    for lr in [0.001, 0.0005]:
-        train_network(execution_id, ctx, network, num_epochs, decay_strat, chosen_optimizer, lr, weight_decay)
-        ctx[0].empty_cache()
-        gc.collect() 
-        execution_id += 1
+lr = 0.005
+train_network(execution_id, ctx, network, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay)
+ctx[0].empty_cache()
+gc.collect() 
