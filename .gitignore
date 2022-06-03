@@ -5,3 +5,4 @@
 /first_train_test.ipynb
 /runs
 *.txt
+5_fold_maker.py
