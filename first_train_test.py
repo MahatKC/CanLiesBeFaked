@@ -1,8 +1,11 @@
 import time, gc, os
 
 import pandas as pd
+import numpy as np
+from datetime import datetime
 from os.path import exists
 from torch.utils.tensorboard import SummaryWriter
+from sklearn.metrics import confusion_matrix
 
 import mxnet as mx
 from mxnet import gluon
@@ -113,7 +116,8 @@ def train_network(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer,
         writer.add_scalar('Accuracy/train', acc, epoch)
         writer.add_scalar('Accuracy/val', val_acc, epoch)
 
-        print(f'[Epoch {epoch}] train={acc} val={val_acc} loss={train_loss/(i+1)} time: {time.time()-tic}')
+        if epoch%20==0:
+            print(f'[Epoch {epoch}] train={acc} val={val_acc} loss={train_loss/(i+1)} time: {time.time()-tic}')
 
     #Get test accuracy
     for i, batch in enumerate(test_data):
@@ -129,82 +133,16 @@ def train_network(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer,
         test_metric.update(label, output)
 
     name, test_acc = test_metric.get()
-    print(f"Test acc={test_acc}")
+    print(f"RUN {execution_id} Test acc={test_acc}")
 
     save_to_csv(execution_id, learning_rate, lr_decay_epoch, optimizer, weight_decay, network, epochs, acc, val_acc)
 
     writer.close()
     writer.flush()
 
-    return test_acc
+    pass
 
-def load_train_val_test(length):
-    transform_train = video.VideoGroupTrainTransform(size=(224, 224), scale_ratios=[1.0, 0.8], mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    
-    train_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/Clips'),
-                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/train.txt'),
-                                train=True,
-                                new_length=length,
-                                video_loader=True,
-                                slowfast = True,
-                                use_decord=True,
-                                transform=transform_train)
-    val_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/Clips'),
-                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/val.txt'),
-                                train=False,
-                                new_length=length,
-                                video_loader=True,
-                                slowfast = True,
-                                use_decord=True,
-                                transform=transform_train)
-                
-    test_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/Clips'),
-                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/test.txt'),
-                                train=False,
-                                new_length=length,
-                                video_loader=True,
-                                slowfast = True,
-                                use_decord=True,
-                                transform=transform_train)
-
-    train_data = gluon.data.DataLoader(train_dataset, batch_size=batch_size,
-                                    shuffle=True, num_workers=num_workers)
-    val_data = gluon.data.DataLoader(val_dataset, batch_size=batch_size,
-                                    shuffle=True, num_workers=num_workers)
-    test_data = gluon.data.DataLoader(test_dataset, batch_size=batch_size,
-                                    shuffle=True, num_workers=num_workers)
-
-    return train_data, val_data, test_data
-
-def load_train_val_test_last_try(length, iter):
-    transform_train = video.VideoGroupTrainTransform(size=(224, 224), scale_ratios=[1.0, 0.8], mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    
-    train_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/Clips'),
-                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/train'+str(iter)+'.txt'),
-                                train=True,
-                                new_length=length,
-                                video_loader=True,
-                                slowfast = True,
-                                use_decord=True,
-                                transform=transform_train)
-                
-    test_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/Clips'),
-                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/test'+str(iter)+'.txt'),
-                                train=False,
-                                new_length=length,
-                                video_loader=True,
-                                slowfast = True,
-                                use_decord=True,
-                                transform=transform_train)
-
-    train_data = gluon.data.DataLoader(train_dataset, batch_size=batch_size,
-                                    shuffle=True, num_workers=num_workers)
-    test_data = gluon.data.DataLoader(test_dataset, batch_size=batch_size,
-                                    shuffle=True, num_workers=num_workers)
-
-    return train_data, test_data
-
-def train_network_last_try(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer, learning_rate, weight_decay):
+def train_5_fold_network(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer, learning_rate, weight_decay, train_data, test_data):
     net = get_model(name=network, nclass=2)
     net.collect_params().reset_ctx(ctx)
 
@@ -258,7 +196,11 @@ def train_network_last_try(execution_id, ctx, network, epochs, lr_decay_epoch, o
         
         name, acc = train_metric.get()
 
-        print(f'[Epoch {epoch}] train={acc} loss={train_loss/(i+1)} time: {time.time()-tic}')
+        if epoch%99==0:
+            print(f'[Epoch {epoch}] train={acc} loss={train_loss/(i+1)} time: {time.time()-tic}')
+
+    all_labels = []
+    all_outputs = []
 
     #Get test accuracy
     for i, batch in enumerate(test_data):
@@ -271,15 +213,117 @@ def train_network_last_try(execution_id, ctx, network, epochs, lr_decay_epoch, o
             pred = net(X)
             output.append(pred)
         
+        for l in label:
+            all_labels.extend(l.asnumpy().tolist())
+
+        for o in output[0]:
+            all_outputs.append(np.argmax(o.asnumpy()))
+        
         test_metric.update(label, output)
 
+    cm = confusion_matrix(all_labels, all_outputs)
+
     name, test_acc = test_metric.get()
-    print(f"Test acc={test_acc}")
+    print(f"Train acc= {acc} Test acc={test_acc}")
 
-    with open('ResultsLastTry.txt','a') as f:
-        f.write('TEST acc:'+str(test_acc))
+    return test_acc, cm
 
-    return test_acc
+def load_train_val_test(length):
+    transform_train = video.VideoGroupTrainTransform(size=(224, 224), scale_ratios=[1.0, 0.8], mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    
+    train_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/Clips'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/train.txt'),
+                                train=True,
+                                new_length=length,
+                                video_loader=True,
+                                slowfast = True,
+                                use_decord=True,
+                                transform=transform_train)
+    val_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/Clips'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/val.txt'),
+                                train=False,
+                                new_length=length,
+                                video_loader=True,
+                                slowfast = True,
+                                use_decord=True,
+                                transform=transform_train)
+                
+    test_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/Clips'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/test.txt'),
+                                train=False,
+                                new_length=length,
+                                video_loader=True,
+                                slowfast = True,
+                                use_decord=True,
+                                transform=transform_train)
+
+    train_data = gluon.data.DataLoader(train_dataset, batch_size=batch_size,
+                                    shuffle=True, num_workers=num_workers)
+    val_data = gluon.data.DataLoader(val_dataset, batch_size=batch_size,
+                                    shuffle=True, num_workers=num_workers)
+    test_data = gluon.data.DataLoader(test_dataset, batch_size=batch_size,
+                                    shuffle=True, num_workers=num_workers)
+
+    return train_data, val_data, test_data
+
+def load_folds(fold_index, length):
+    transform_train = video.VideoGroupTrainTransform(size=(224, 224), scale_ratios=[1.0, 0.8], mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    
+    #UNCOMMENT THIS FOR FIRST RUN
+    #filenames = ['fold_0.txt', 'fold_1.txt', 'fold_2.txt', 'fold_3.txt', 'fold_4.txt']
+    #with open('Real-life_Deception_Detection_2016/train_with_fold_'+str(fold_index)+'_as_test.txt', 'w') as outfile:
+    #    for fname in filenames:
+    #        if fname == 'fold_'+str(fold_index)+'.txt':
+    #            continue
+    #        else:
+    #            with open('Real-life_Deception_Detection_2016/'+fname) as infile:
+    #                for line in infile:
+    #                    outfile.write(line)
+    #                outfile.write('\n')
+
+    train_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/Clips'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/train_with_fold_'+str(fold_index)+'_as_test.txt'),
+                                train=True,
+                                new_length=length,
+                                video_loader=True,
+                                slowfast = True,
+                                use_decord=True,
+                                transform=transform_train)
+                
+    test_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/Clips'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/fold_'+str(fold_index)+'.txt'),
+                                train=False,
+                                new_length=length,
+                                video_loader=True,
+                                slowfast = True,
+                                use_decord=True,
+                                transform=transform_train)
+
+    train_data = gluon.data.DataLoader(train_dataset, batch_size=batch_size,
+                                    shuffle=True, num_workers=num_workers)
+    test_data = gluon.data.DataLoader(test_dataset, batch_size=batch_size,
+                                    shuffle=True, num_workers=num_workers)
+
+    return train_data, test_data
+
+def train_5_fold(execution_id, ctx, network, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay):
+    final_test_acc = 0
+    execution_id *= 100
+    print(datetime.now())
+    with open('5FoldResults.txt', 'a') as results:
+        results.write('\nRun '+str(execution_id)+"\n")
+        for i in range(5):
+            train_data, test_data = load_folds(i, 64)
+            test_acc, cm = train_5_fold_network(execution_id+i, ctx, network, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay, train_data, test_data)
+            ctx[0].empty_cache()
+            gc.collect() 
+            final_test_acc += test_acc
+            results.write('------Fold '+str(i)+" | Acuracia: "+str(test_acc)+'\n')
+            results.write(str(cm))
+            results.write('\n')
+
+        results.write("ACURACIA FINAL: "+str(final_test_acc/5)+'\n')
+    print(f"ACURACIA FINAL: {final_test_acc/5}")
 
 num_gpus = 1
 ctx = [mx.gpu(i) for i in range(num_gpus)]
@@ -287,27 +331,17 @@ per_device_batch_size = 1
 num_workers = 1
 batch_size = per_device_batch_size * num_gpus
 
-hyperparameters = {
-    'learning_rate' : [0.005, 0.001, 0.0005, 0.0001],
-    'lr_decay_strategy': [[10, 20, 30, 40, 50, 60, 70, 80, 90, 100], [40, 80, 100], [20, 40, 60, 80, 100], [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200], [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 300], [40, 80, 100, 300]],
-    'optimizer': ['sgd', 'adam', 'rmsprop'],
-    'wd': [0.001, 0.0001],
-    'network': ['slowfast_4x16_resnet50_kinetics400', 'slowfast_4x16_resnet50_custom', 'slowfast_8x8_resnet50_kinetics400']
-}
+lr_decay_strategy = [[10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 300], [40, 80, 100, 300]]
 
 network = 'slowfast_4x16_resnet50_kinetics400'
 chosen_optimizer = 'sgd'
-weight_decay = 0.0001
-lr_decay_strategy = hyperparameters['lr_decay_strategy'][4]
-num_epochs = 200
-execution_id = 500
-lr = 0.001
 
-for iter in range(4):
-    print("-"*10)
-    print(f"ITER {iter}")
-    print("-"*10)
-    train_data, test_data = load_train_val_test_last_try(64, iter)
-    train_network_last_try(execution_id, ctx, network, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay)
-    ctx[0].empty_cache()
-    gc.collect()
+params = [[11,100,0,0.0001,0.0005],
+          [ 8,100,0,0.0001, 0.001]]
+
+for i in range(4):
+    for id, epochs, strat, wd, lr in params:
+        print(f'BEGINNING RUN {id}')
+        print('-'*20)
+        decay_strat = lr_decay_strategy[strat]
+        train_5_fold(id, ctx, network, epochs, decay_strat, chosen_optimizer, lr, wd)
