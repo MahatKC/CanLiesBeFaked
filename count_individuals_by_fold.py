@@ -8,7 +8,7 @@ folds = []
 
 for i in range(5):
     fold = []
-    with open("Real-life_Deception_Detection_2016/fold_"+str(i)+".txt", "r") as f:
+    with open("Real-life_Deception_Detection_2016/foldB_"+str(i)+".txt", "r") as f:
         for line in f:
             x = line.split(' ')
             video = x[0][:-4]
@@ -20,22 +20,4 @@ for i in range(5):
 
 for fold in folds:
     fold.sort()
-    print(fold)
-
-sets = []
-
-for set in ['train','val','test']:
-    set_list = []
-    with open("Real-life_Deception_Detection_2016/"+set+"38.txt", "r") as f:
-        for line in f:
-            x = line.split(' ')
-            video = x[0][:-4]
-            video_idx = files_list.index(video)
-            individual = individuals_list[video_idx]
-            if individual not in set_list:
-                set_list.append(individual)
-    sets.append(set_list)
-
-for set in sets:
-    set.sort()
-    print(set)
+    print(fold, len(fold))

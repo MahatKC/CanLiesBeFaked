@@ -196,9 +196,6 @@ def train_5_fold_network(execution_id, ctx, network, epochs, lr_decay_epoch, opt
         
         name, acc = train_metric.get()
 
-        if epoch%99==0:
-            print(f'[Epoch {epoch}] train={acc} loss={train_loss/(i+1)} time: {time.time()-tic}')
-
     all_labels = []
     all_outputs = []
 
@@ -270,10 +267,10 @@ def load_folds(fold_index, length):
     transform_train = video.VideoGroupTrainTransform(size=(224, 224), scale_ratios=[1.0, 0.8], mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     
     #UNCOMMENT THIS FOR FIRST RUN
-    #filenames = ['fold_0.txt', 'fold_1.txt', 'fold_2.txt', 'fold_3.txt', 'fold_4.txt']
-    #with open('Real-life_Deception_Detection_2016/train_with_fold_'+str(fold_index)+'_as_test.txt', 'w') as outfile:
+    #filenames = ['foldB_0.txt', 'foldB_1.txt', 'foldB_2.txt', 'foldB_3.txt', 'foldB_4.txt']
+    #with open('Real-life_Deception_Detection_2016/train_with_foldB_'+str(fold_index)+'_as_test.txt', 'w') as outfile:
     #    for fname in filenames:
-    #        if fname == 'fold_'+str(fold_index)+'.txt':
+    #        if fname == 'foldB_'+str(fold_index)+'.txt':
     #            continue
     #        else:
     #            with open('Real-life_Deception_Detection_2016/'+fname) as infile:
@@ -282,7 +279,7 @@ def load_folds(fold_index, length):
     #                outfile.write('\n')
 
     train_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/Clips'),
-                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/train_with_fold_'+str(fold_index)+'_as_test.txt'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/train_with_foldB_'+str(fold_index)+'_as_test.txt'),
                                 train=True,
                                 new_length=length,
                                 video_loader=True,
@@ -291,7 +288,7 @@ def load_folds(fold_index, length):
                                 transform=transform_train)
                 
     test_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/Clips'),
-                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/fold_'+str(fold_index)+'.txt'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/foldB_'+str(fold_index)+'.txt'),
                                 train=False,
                                 new_length=length,
                                 video_loader=True,
@@ -336,12 +333,16 @@ lr_decay_strategy = [[10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 300], [40, 80, 10
 network = 'slowfast_4x16_resnet50_kinetics400'
 chosen_optimizer = 'sgd'
 
-params = [[11,100,0,0.0001,0.0005],
-          [ 8,100,0,0.0001, 0.001]]
+params = [[ 8,100,0,0.0001, 0.001],
+          [11,100,0,0.0001,0.0005],
+          [ 6,100,1,0.0001, 0.005],
+          [65,200,0,0.0001, 0.001],
+          [67,200,1,0.0001, 0.005]
+         ]
 
-for i in range(4):
-    for id, epochs, strat, wd, lr in params:
-        print(f'BEGINNING RUN {id}')
-        print('-'*20)
-        decay_strat = lr_decay_strategy[strat]
-        train_5_fold(id, ctx, network, epochs, decay_strat, chosen_optimizer, lr, wd)
+
+for id, epochs, strat, wd, lr in params:
+    print(f'BEGINNING RUN {id}')
+    print('-'*20)
+    decay_strat = lr_decay_strategy[strat]
+    train_5_fold(id, ctx, network, epochs, decay_strat, chosen_optimizer, lr, wd)
