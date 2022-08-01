@@ -39,19 +39,19 @@ if __name__=="__main__":
     truth_counts = [0]*5
 
     indiv_order = [3, 2, 1, 22, 7, 12, 25, 30, 36, 37]
-    indiv_list_index = [21,9,0,69,45,56,79,85,92,94]
+    indiv_list_index = [42,18,0,138,90,112,158,170,184,188]
     indiv_index = 0
 
-    while(sum(fold_counts)<110):
+    while(sum(fold_counts)<220):
         if len(chosen_individuals)==51 or len(chosen_individuals)==0:
             chosen_individuals, fold_counts, lie_counts, truth_counts, fold_vids = reset(df, chosen_individuals, fold_counts, lie_counts, truth_counts, fold_vids)
 
         if indiv_index==10:
-            random_index = np.random.randint(110)
+            random_index = np.random.randint(220)
             individual_index = int(df["INDIVIDUAL"][random_index])
 
             while individual_index in chosen_individuals:
-                random_index = np.random.randint(110)
+                random_index = np.random.randint(220)
                 individual_index = int(df["INDIVIDUAL"][random_index])
         else:
             individual_index = indiv_order[indiv_index]
@@ -77,12 +77,12 @@ if __name__=="__main__":
         for i in range(len(individual_videos)):
             #9 lies 13 truths
             if individual_videos[i][6] == 'l':
-                while (lie_counts[current_fold]==11 and current_fold<4) or (lie_counts[current_fold]==9 and current_fold==4):
+                while (lie_counts[current_fold]==22 and current_fold<4) or (lie_counts[current_fold]==18 and current_fold==4):
                     current_fold = (current_fold+1)%5
                 lie_counts[current_fold] += 1
 
             else:
-                while (truth_counts[current_fold]==11 and current_fold<4) or (truth_counts[current_fold]==13 and current_fold==4):
+                while (truth_counts[current_fold]==22 and current_fold<4) or (truth_counts[current_fold]==26 and current_fold==4):
                     current_fold = (current_fold+1)%5
                 truth_counts[current_fold] += 1
 
@@ -94,4 +94,4 @@ if __name__=="__main__":
         fold_vid.sort()
             
     for i in range(5):
-        write_set_to_file(fold_vids[i], "foldB_"+str(i))
+        write_set_to_file(fold_vids[i], "foldBF_"+str(i))

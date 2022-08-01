@@ -6,3 +6,4 @@
 /runs
 *.txt
 5_fold_maker.py
+runsF/*

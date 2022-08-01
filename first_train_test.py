@@ -29,16 +29,16 @@ def save_to_csv(execution_id, learning_rate, lr_decay_strategy, optimizer, weigh
         'val_acc': [str(val_acc)]
     })
 
-    if exists("hyperparameter_search.csv"):
-        file_df = pd.read_csv("hyperparameter_search.csv")
+    if exists("hyperparameter_search_F.csv"):
+        file_df = pd.read_csv("hyperparameter_search_F.csv")
         file_df = pd.concat([file_df,results_df], ignore_index=True)
-        file_df.to_csv("hyperparameter_search.csv",index=False)
+        file_df.to_csv("hyperparameter_search_F.csv",index=False)
     else:
-        results_df.to_csv("hyperparameter_search.csv",index=False)
+        results_df.to_csv("hyperparameter_search_F.csv",index=False)
     
     pass
 
-def train_network(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer, learning_rate, weight_decay):
+def train_network(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer, learning_rate, weight_decay, train_data, test_data):
     net = get_model(name=network, nclass=2)
     net.collect_params().reset_ctx(ctx)
 
@@ -55,8 +55,7 @@ def train_network(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer,
 
     train_metric = mx.metric.Accuracy()
     val_metric = mx.metric.Accuracy()
-    test_metric = mx.metric.Accuracy()
-    writer = SummaryWriter(log_dir='runs/run'+str(execution_id))
+    writer = SummaryWriter(log_dir='runsF/run'+str(execution_id))
 
     lr_decay_count = 0
 
@@ -97,7 +96,7 @@ def train_network(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer,
             train_metric.update(label, output)
         
         #Get validation accuracy
-        for i, batch in enumerate(val_data):
+        for i, batch in enumerate(test_data):
             data = split_and_load(batch[0], ctx_list=ctx, batch_axis=0)
             label = split_and_load(batch[1], ctx_list=ctx, batch_axis=0)
             
@@ -118,22 +117,6 @@ def train_network(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer,
 
         if epoch%20==0:
             print(f'[Epoch {epoch}] train={acc} val={val_acc} loss={train_loss/(i+1)} time: {time.time()-tic}')
-
-    #Get test accuracy
-    for i, batch in enumerate(test_data):
-        data = split_and_load(batch[0], ctx_list=ctx, batch_axis=0)
-        label = split_and_load(batch[1], ctx_list=ctx, batch_axis=0)
-        
-        output = []
-        for _, X in enumerate(data):
-            X = X.reshape((-1,) + X.shape[2:])
-            pred = net(X)
-            output.append(pred)
-        
-        test_metric.update(label, output)
-
-    name, test_acc = test_metric.get()
-    print(f"RUN {execution_id} Test acc={test_acc}")
 
     save_to_csv(execution_id, learning_rate, lr_decay_epoch, optimizer, weight_decay, network, epochs, acc, val_acc)
 
@@ -266,20 +249,8 @@ def load_train_val_test(length):
 def load_folds(fold_index, length):
     transform_train = video.VideoGroupTrainTransform(size=(224, 224), scale_ratios=[1.0, 0.8], mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     
-    #UNCOMMENT THIS FOR FIRST RUN
-    #filenames = ['foldB_0.txt', 'foldB_1.txt', 'foldB_2.txt', 'foldB_3.txt', 'foldB_4.txt']
-    #with open('Real-life_Deception_Detection_2016/train_with_foldB_'+str(fold_index)+'_as_test.txt', 'w') as outfile:
-    #    for fname in filenames:
-    #        if fname == 'foldB_'+str(fold_index)+'.txt':
-    #            continue
-    #        else:
-    #            with open('Real-life_Deception_Detection_2016/'+fname) as infile:
-    #                for line in infile:
-    #                    outfile.write(line)
-    #                outfile.write('\n')
-
     train_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/Clips'),
-                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/train_with_foldB_'+str(fold_index)+'_as_test.txt'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/train_with_foldBF_'+str(fold_index)+'_as_test.txt'),
                                 train=True,
                                 new_length=length,
                                 video_loader=True,
@@ -288,7 +259,7 @@ def load_folds(fold_index, length):
                                 transform=transform_train)
                 
     test_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/Clips'),
-                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/foldB_'+str(fold_index)+'.txt'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/foldBF_'+str(fold_index)+'.txt'),
                                 train=False,
                                 new_length=length,
                                 video_loader=True,
@@ -331,18 +302,22 @@ batch_size = per_device_batch_size * num_gpus
 lr_decay_strategy = [[10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 300], [40, 80, 100, 300]]
 
 network = 'slowfast_4x16_resnet50_kinetics400'
-chosen_optimizer = 'sgd'
+chosen_optimizer = ['sgd', 'adam', 'rmsprop']
+wd = 0.001
+epochs = 100
+l_r = [0.005, 0.001, 0.0005]
+w_d = [0.01, 0.0001]
 
-params = [[ 8,100,0,0.0001, 0.001],
-          [11,100,0,0.0001,0.0005],
-          [ 6,100,1,0.0001, 0.005],
-          [65,200,0,0.0001, 0.001],
-          [67,200,1,0.0001, 0.005]
-         ]
+id = 0
 
-
-for id, epochs, strat, wd, lr in params:
-    print(f'BEGINNING RUN {id}')
-    print('-'*20)
-    decay_strat = lr_decay_strategy[strat]
-    train_5_fold(id, ctx, network, epochs, decay_strat, chosen_optimizer, lr, wd)
+for optimizer in chosen_optimizer:
+    for decay_strat in lr_decay_strategy:
+        for lr in l_r:
+            for wd in w_d:
+                print(f'BEGINNING RUN {id}')
+                print('-'*20)
+                train_data, test_data = load_folds(0, 64)
+                train_network(id, ctx, network, epochs, decay_strat, optimizer, lr, wd, train_data, test_data)
+                ctx[0].empty_cache()
+                gc.collect() 
+                id+=1
