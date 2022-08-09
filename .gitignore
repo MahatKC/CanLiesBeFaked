@@ -7,3 +7,5 @@
 *.txt
 5_fold_maker.py
 runsF/*
+*.mp4
+runsBoL/*

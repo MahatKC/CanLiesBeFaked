@@ -29,12 +29,12 @@ def save_to_csv(execution_id, learning_rate, lr_decay_strategy, optimizer, weigh
         'val_acc': [str(val_acc)]
     })
 
-    if exists("hyperparameter_search_F.csv"):
-        file_df = pd.read_csv("hyperparameter_search_F.csv")
+    if exists("hyperparameter_search_BoL.csv"):
+        file_df = pd.read_csv("hyperparameter_search_BoL.csv")
         file_df = pd.concat([file_df,results_df], ignore_index=True)
-        file_df.to_csv("hyperparameter_search_F.csv",index=False)
+        file_df.to_csv("hyperparameter_search_BoL.csv",index=False)
     else:
-        results_df.to_csv("hyperparameter_search_F.csv",index=False)
+        results_df.to_csv("hyperparameter_search_BoL.csv",index=False)
     
     pass
 
@@ -55,7 +55,7 @@ def train_network(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer,
 
     train_metric = mx.metric.Accuracy()
     val_metric = mx.metric.Accuracy()
-    writer = SummaryWriter(log_dir='runsF/run'+str(execution_id))
+    writer = SummaryWriter(log_dir='runsBoL/run'+str(execution_id))
 
     lr_decay_count = 0
 
@@ -125,7 +125,7 @@ def train_network(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer,
 
     pass
 
-def train_5_fold_network(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer, learning_rate, weight_decay, train_data, test_data):
+def train_and_test_network(ctx, network, epochs, lr_decay_epoch, optimizer, learning_rate, weight_decay, train_data, test_data):
     net = get_model(name=network, nclass=2)
     net.collect_params().reset_ctx(ctx)
 
@@ -142,7 +142,8 @@ def train_5_fold_network(execution_id, ctx, network, epochs, lr_decay_epoch, opt
     lr_decay_count = 0
 
     for epoch in range(epochs):
-        tic = time.time()
+        t0 = time.time()
+
         train_metric.reset()
         train_loss = 0
 
@@ -179,6 +180,10 @@ def train_5_fold_network(execution_id, ctx, network, epochs, lr_decay_epoch, opt
         
         name, acc = train_metric.get()
 
+        if (epoch*5)%epochs==0:
+            t1 = time.time()
+            print(f"EPOCH {epoch}, {t1-t0} sec")
+
     all_labels = []
     all_outputs = []
 
@@ -207,6 +212,34 @@ def train_5_fold_network(execution_id, ctx, network, epochs, lr_decay_epoch, opt
     print(f"Train acc= {acc} Test acc={test_acc}")
 
     return test_acc, cm
+
+def load_rlt_train_bol_test(length):
+    transform_train = video.VideoGroupTrainTransform(size=(224, 224), scale_ratios=[1.0, 0.8], mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    
+    rlt_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/Clips'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/whole_rlt.txt'),
+                                train=True,
+                                new_length=length,
+                                video_loader=True,
+                                slowfast = True,
+                                use_decord=True,
+                                transform=transform_train)
+                
+    bol_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Box of Lies Vids/Clips'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Box of Lies Vids/whole_bol.txt'),
+                                train=False,
+                                new_length=length,
+                                video_loader=True,
+                                slowfast = True,
+                                use_decord=True,
+                                transform=transform_train)
+
+    train_data = gluon.data.DataLoader(rlt_dataset, batch_size=batch_size,
+                                    shuffle=True, num_workers=num_workers)
+    test_data = gluon.data.DataLoader(bol_dataset, batch_size=batch_size,
+                                    shuffle=True, num_workers=num_workers)
+
+    return train_data, test_data
 
 def load_train_val_test(length):
     transform_train = video.VideoGroupTrainTransform(size=(224, 224), scale_ratios=[1.0, 0.8], mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -249,8 +282,8 @@ def load_train_val_test(length):
 def load_folds(fold_index, length):
     transform_train = video.VideoGroupTrainTransform(size=(224, 224), scale_ratios=[1.0, 0.8], mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     
-    train_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/Clips'),
-                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/train_with_foldBF_'+str(fold_index)+'_as_test.txt'),
+    train_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Box of Lies Vids/Clips'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Box of Lies Vids/train_with_foldBoL_'+str(fold_index)+'_as_test.txt'),
                                 train=True,
                                 new_length=length,
                                 video_loader=True,
@@ -258,8 +291,8 @@ def load_folds(fold_index, length):
                                 use_decord=True,
                                 transform=transform_train)
                 
-    test_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/Clips'),
-                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/foldBF_'+str(fold_index)+'.txt'),
+    test_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Box of Lies Vids/Clips'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Box of Lies Vids/foldBoL_'+str(fold_index)+'.txt'),
                                 train=False,
                                 new_length=length,
                                 video_loader=True,
@@ -276,13 +309,12 @@ def load_folds(fold_index, length):
 
 def train_5_fold(execution_id, ctx, network, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay):
     final_test_acc = 0
-    execution_id *= 100
     print(datetime.now())
-    with open('5FoldResults.txt', 'a') as results:
+    with open('5FoldResultsBoL.txt', 'a') as results:
         results.write('\nRun '+str(execution_id)+"\n")
         for i in range(5):
             train_data, test_data = load_folds(i, 64)
-            test_acc, cm = train_5_fold_network(execution_id+i, ctx, network, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay, train_data, test_data)
+            test_acc, cm = train_and_test_network(execution_id+i, ctx, network, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay, train_data, test_data)
             ctx[0].empty_cache()
             gc.collect() 
             final_test_acc += test_acc
@@ -299,25 +331,20 @@ per_device_batch_size = 1
 num_workers = 1
 batch_size = per_device_batch_size * num_gpus
 
-lr_decay_strategy = [[10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 300], [40, 80, 100, 300]]
-
 network = 'slowfast_4x16_resnet50_kinetics400'
-chosen_optimizer = ['sgd', 'adam', 'rmsprop']
-wd = 0.001
-epochs = 100
-l_r = [0.005, 0.001, 0.0005]
-w_d = [0.01, 0.0001]
+optimizer = 'sgd'
+epochs = 1
 
-id = 0
+lr=[0.005, 0.001, 0.0005]
+wd=[0, 0.000001, 0.0001, 0.01]
+execution_id = 0
+decay_strat = [[0,10,20,30,40,50,60,70,80,90,100,300],[40, 80, 100, 300]]
 
-for optimizer in chosen_optimizer:
-    for decay_strat in lr_decay_strategy:
-        for lr in l_r:
-            for wd in w_d:
-                print(f'BEGINNING RUN {id}')
-                print('-'*20)
-                train_data, test_data = load_folds(0, 64)
-                train_network(id, ctx, network, epochs, decay_strat, optimizer, lr, wd, train_data, test_data)
-                ctx[0].empty_cache()
-                gc.collect() 
-                id+=1
+for lr_decay_epoch in decay_strat:
+    for learning_rate in lr:
+        for weight_decay in wd:
+            train_data, test_data = load_folds(0, 64)
+            train_network(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer, learning_rate, weight_decay, train_data, test_data)
+            execution_id += 1
+            ctx[0].empty_cache()
+            gc.collect() 
