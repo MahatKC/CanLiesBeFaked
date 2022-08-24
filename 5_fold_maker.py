@@ -4,6 +4,7 @@ import numpy as np
 
 def write_set_to_file(set, set_name):
     with open("Real-life_Deception_Detection_2016/"+set_name+".txt", "w") as f:
+        
         for element in set:
             if element == set[-1]:
                 skip_line = ""

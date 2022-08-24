@@ -2,7 +2,7 @@ import time, gc, os
 
 import pandas as pd
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 from os.path import exists
 from torch.utils.tensorboard import SummaryWriter
 from sklearn.metrics import confusion_matrix
@@ -38,14 +38,14 @@ def save_to_csv(execution_id, learning_rate, lr_decay_strategy, optimizer, weigh
     
     pass
 
-def train_network(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer, learning_rate, weight_decay, train_data, test_data):
+def train_network(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer, learning_rate, weight_decay, momentum, train_data, test_data):
     net = get_model(name=network, nclass=2)
     net.collect_params().reset_ctx(ctx)
 
     lr_decay = 0.1
 
     if optimizer=='sgd':
-        optimizer_params = {'learning_rate': learning_rate, 'wd': weight_decay, 'momentum': 0.9} 
+        optimizer_params = {'learning_rate': learning_rate, 'wd': weight_decay, 'momentum': momentum} 
     else:
         #Using standard beta1, beta2 and epsilon for Adam and standard gamma1 and gamma2 for RMSProp
         optimizer_params = {'learning_rate': learning_rate, 'wd': weight_decay} 
@@ -62,6 +62,7 @@ def train_network(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer,
     for epoch in range(epochs):
         tic = time.time()
         train_metric.reset()
+        #val_metric.reset()
         train_loss = 0
 
         # Learning rate decay
@@ -125,13 +126,13 @@ def train_network(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer,
 
     pass
 
-def train_and_test_network(ctx, network, epochs, lr_decay_epoch, optimizer, learning_rate, weight_decay, train_data, test_data):
+def train_and_test_network(ctx, network, epochs, lr_decay_epoch, optimizer, learning_rate, weight_decay, momentum, train_data, test_data):
     net = get_model(name=network, nclass=2)
     net.collect_params().reset_ctx(ctx)
 
     lr_decay = 0.1
 
-    optimizer_params = {'learning_rate': learning_rate, 'wd': weight_decay, 'momentum': 0.9} 
+    optimizer_params = {'learning_rate': learning_rate, 'wd': weight_decay, 'momentum': momentum} 
 
     trainer = gluon.Trainer(net.collect_params(), optimizer, optimizer_params)
     loss_fn = gluon.loss.SoftmaxCrossEntropyLoss()
@@ -307,14 +308,33 @@ def load_folds(fold_index, length):
 
     return train_data, test_data
 
-def train_5_fold(execution_id, ctx, network, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay):
+def get_network_and_data(network_config, fold_idx):
+    if network_config=='8x8':
+        network = 'slowfast_8x8_resnet50_kinetics400'
+        train_data, test_data = load_folds(fold_idx, 128)
+    elif network_config=='4x16':
+        network = 'slowfast_4x16_resnet50_kinetics400'
+        train_data, test_data = load_folds(fold_idx, 64)
+    else:
+        print("ERRO")
+        network, train_data, test_data = '','',''
+    
+    return network, train_data, test_data
+
+def train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay, momentum):
     final_test_acc = 0
-    print(datetime.now())
+    if network_tag=='8x8':
+        duration = timedelta(minutes=675)
+    else:
+        duration = timedelta(minutes=440)
+        
+    print(f"Execução {execution_id} iniciando às: {datetime.now()}. Previsão de término para às: {datetime.now()+duration}")
+    
     with open('5FoldResultsBoL.txt', 'a') as results:
         results.write('\nRun '+str(execution_id)+"\n")
         for i in range(5):
-            train_data, test_data = load_folds(i, 64)
-            test_acc, cm = train_and_test_network(execution_id+i, ctx, network, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay, train_data, test_data)
+            network, train_data, test_data = get_network_and_data(network_tag, i)
+            test_acc, cm = train_and_test_network(execution_id+i, ctx, network, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay, momentum, train_data, test_data)
             ctx[0].empty_cache()
             gc.collect() 
             final_test_acc += test_acc
@@ -330,21 +350,74 @@ ctx = [mx.gpu(i) for i in range(num_gpus)]
 per_device_batch_size = 1
 num_workers = 1
 batch_size = per_device_batch_size * num_gpus
+num_epochs = 100
 
-network = 'slowfast_4x16_resnet50_kinetics400'
+network_tag = '8x8'
+lr_decay_strategy = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 300]
+
+execution_id = 169
+optimizer = 'adam'
+weight_decay = 0
+lr = 0.005
+momentum=0
+
+train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)
+
+execution_id = 175
+optimizer = 'rmsprop'
+weight_decay = 0.000001
+lr = 0.0005
+
+train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)
+
+execution_id = 128
 optimizer = 'sgd'
-epochs = 1
+weight_decay = 0.000001
+momentum = 0.9
+lr = 0.01
 
-lr=[0.005, 0.001, 0.0005]
-wd=[0, 0.000001, 0.0001, 0.01]
-execution_id = 0
-decay_strat = [[0,10,20,30,40,50,60,70,80,90,100,300],[40, 80, 100, 300]]
+train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)
 
-for lr_decay_epoch in decay_strat:
-    for learning_rate in lr:
-        for weight_decay in wd:
-            train_data, test_data = load_folds(0, 64)
-            train_network(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer, learning_rate, weight_decay, train_data, test_data)
-            execution_id += 1
-            ctx[0].empty_cache()
-            gc.collect() 
+execution_id = 125
+lr = 0.1
+
+train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)
+
+execution_id = 130
+lr = 0.001
+momentum = 0.5
+
+train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)
+
+network_tag = '4x16'
+execution_id = 79
+lr = 0.1
+
+train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)
+
+execution_id = 94
+lr = 0.1
+lr_decay_strategy = [40, 80, 100, 300]
+
+train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)
+
+optimizer = 'rmsprop'
+momentum = 0
+lr = 0.0005
+lr_decay_strategy = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 300]
+execution_id = 64
+weight_decay = 0.0001
+
+train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)
+
+execution_id = 66
+weight_decay = 0
+
+train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)
+
+optimizer = 'adam'
+execution_id = 34
+weight_decay = 0
+lr = 0.005
+
+train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)

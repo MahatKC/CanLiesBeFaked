@@ -1,15 +1,17 @@
 from cv2 import add
 import pandas as pd
 import numpy as np
+import random
 
 def write_set_to_file(set, set_name):
     with open("Box of Lies Vids/"+set_name+".txt", "w") as f:
+        random.shuffle(set)
         for element in set:
             if element == set[-1]:
                 skip_line = ""
             else:
                 skip_line = "\n"
-            if element[6]=='t':
+            if element[4]=='t':
                 f.write(element+" 500 1"+skip_line)
             else:
                 f.write(element+" 500 0"+skip_line)
