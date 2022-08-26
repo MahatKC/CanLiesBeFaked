@@ -132,7 +132,11 @@ def train_and_test_network(ctx, network, epochs, lr_decay_epoch, optimizer, lear
 
     lr_decay = 0.1
 
-    optimizer_params = {'learning_rate': learning_rate, 'wd': weight_decay, 'momentum': momentum} 
+    if optimizer=='sgd':
+        optimizer_params = {'learning_rate': learning_rate, 'wd': weight_decay, 'momentum': momentum} 
+    else:
+        #Using standard beta1, beta2 and epsilon for Adam and standard gamma1 and gamma2 for RMSProp
+        optimizer_params = {'learning_rate': learning_rate, 'wd': weight_decay} 
 
     trainer = gluon.Trainer(net.collect_params(), optimizer, optimizer_params)
     loss_fn = gluon.loss.SoftmaxCrossEntropyLoss()
@@ -327,14 +331,14 @@ def train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, 
         duration = timedelta(minutes=675)
     else:
         duration = timedelta(minutes=440)
-        
+
     print(f"Execução {execution_id} iniciando às: {datetime.now()}. Previsão de término para às: {datetime.now()+duration}")
     
     with open('5FoldResultsBoL.txt', 'a') as results:
         results.write('\nRun '+str(execution_id)+"\n")
         for i in range(5):
             network, train_data, test_data = get_network_and_data(network_tag, i)
-            test_acc, cm = train_and_test_network(execution_id+i, ctx, network, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay, momentum, train_data, test_data)
+            test_acc, cm = train_and_test_network(ctx, network, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay, momentum, train_data, test_data)
             ctx[0].empty_cache()
             gc.collect() 
             final_test_acc += test_acc
@@ -354,7 +358,7 @@ num_epochs = 100
 
 network_tag = '8x8'
 lr_decay_strategy = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 300]
-
+"""
 execution_id = 169
 optimizer = 'adam'
 weight_decay = 0
@@ -369,7 +373,7 @@ weight_decay = 0.000001
 lr = 0.0005
 
 train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)
-
+"""
 execution_id = 128
 optimizer = 'sgd'
 weight_decay = 0.000001
