@@ -16,12 +16,13 @@ from gluoncv.data import VideoClsCustom
 from gluoncv.model_zoo import get_model
 from gluoncv.utils import split_and_load
 
-def save_to_csv(execution_id, learning_rate, lr_decay_strategy, optimizer, weight_decay, network, epochs, acc, val_acc):
+def save_to_csv(execution_id, learning_rate, lr_decay_strategy, optimizer, momentum, weight_decay, network, epochs, acc, val_acc):
     results_df = pd.DataFrame({
         'execution_id': [str(execution_id)],
         'learning_rate' : [str(learning_rate)],
         'lr_decay_strategy': [str(lr_decay_strategy)],
         'optimizer': [optimizer],
+        'momentum': [momentum],
         'wd': [str(weight_decay)],
         'network': [network],
         'epochs': [str(epochs)],
@@ -29,12 +30,12 @@ def save_to_csv(execution_id, learning_rate, lr_decay_strategy, optimizer, weigh
         'val_acc': [str(val_acc)]
     })
 
-    if exists("hyperparameter_search_BoL.csv"):
-        file_df = pd.read_csv("hyperparameter_search_BoL.csv")
+    if exists("hyperparameter_search_both_datasets.csv"):
+        file_df = pd.read_csv("hyperparameter_search_both_datasets.csv")
         file_df = pd.concat([file_df,results_df], ignore_index=True)
-        file_df.to_csv("hyperparameter_search_BoL.csv",index=False)
+        file_df.to_csv("hyperparameter_search_both_datasets.csv",index=False)
     else:
-        results_df.to_csv("hyperparameter_search_BoL.csv",index=False)
+        results_df.to_csv("hyperparameter_search_both_datasets.csv",index=False)
     
     pass
 
@@ -55,7 +56,7 @@ def train_network(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer,
 
     train_metric = mx.metric.Accuracy()
     val_metric = mx.metric.Accuracy()
-    writer = SummaryWriter(log_dir='runsBoL/run'+str(execution_id))
+    writer = SummaryWriter(log_dir='runsBoth/run'+str(execution_id))
 
     lr_decay_count = 0
 
@@ -119,7 +120,7 @@ def train_network(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer,
         if epoch%20==0:
             print(f'[Epoch {epoch}] train={acc} val={val_acc} loss={train_loss/(i+1)} time: {time.time()-tic}')
 
-    save_to_csv(execution_id, learning_rate, lr_decay_epoch, optimizer, weight_decay, network, epochs, acc, val_acc)
+    save_to_csv(execution_id, learning_rate, lr_decay_epoch, optimizer, momentum, weight_decay, network, epochs, acc, val_acc)
 
     writer.close()
     writer.flush()
@@ -218,6 +219,34 @@ def train_and_test_network(ctx, network, epochs, lr_decay_epoch, optimizer, lear
 
     return test_acc, cm
 
+def load_bol_train_rlt_test(length):
+    transform_train = video.VideoGroupTrainTransform(size=(224, 224), scale_ratios=[1.0, 0.8], mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    
+    bol_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Box of Lies Vids/Clips'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Box of Lies Vids/whole_bol.txt'),
+                                train=True,
+                                new_length=length,
+                                video_loader=True,
+                                slowfast = True,
+                                use_decord=True,
+                                transform=transform_train)
+                
+    rlt_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/Clips'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Real-life_Deception_Detection_2016/whole_rlt.txt'),
+                                train=False,
+                                new_length=length,
+                                video_loader=True,
+                                slowfast = True,
+                                use_decord=True,
+                                transform=transform_train)
+
+    train_data = gluon.data.DataLoader(bol_dataset, batch_size=batch_size,
+                                    shuffle=True, num_workers=num_workers)
+    test_data = gluon.data.DataLoader(rlt_dataset, batch_size=batch_size,
+                                    shuffle=True, num_workers=num_workers)
+
+    return train_data, test_data
+
 def load_rlt_train_bol_test(length):
     transform_train = video.VideoGroupTrainTransform(size=(224, 224), scale_ratios=[1.0, 0.8], mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     
@@ -287,8 +316,8 @@ def load_train_val_test(length):
 def load_folds(fold_index, length):
     transform_train = video.VideoGroupTrainTransform(size=(224, 224), scale_ratios=[1.0, 0.8], mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     
-    train_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Box of Lies Vids/Clips'),
-                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Box of Lies Vids/train_with_foldBoL_'+str(fold_index)+'_as_test.txt'),
+    train_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Both Datasets/Clips'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Both Datasets/train_with_fold_'+str(fold_index)+'_as_test.txt'),
                                 train=True,
                                 new_length=length,
                                 video_loader=True,
@@ -296,8 +325,8 @@ def load_folds(fold_index, length):
                                 use_decord=True,
                                 transform=transform_train)
                 
-    test_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Box of Lies Vids/Clips'),
-                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Box of Lies Vids/foldBoL_'+str(fold_index)+'.txt'),
+    test_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Both Datasets/Clips'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Both Datasets/fold_'+str(fold_index)+'.txt'),
                                 train=False,
                                 new_length=length,
                                 video_loader=True,
@@ -354,74 +383,24 @@ ctx = [mx.gpu(i) for i in range(num_gpus)]
 per_device_batch_size = 1
 num_workers = 1
 batch_size = per_device_batch_size * num_gpus
-num_epochs = 100
+epochs = 100
 
-network_tag = '8x8'
-lr_decay_strategy = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 300]
-"""
-execution_id = 169
-optimizer = 'adam'
-weight_decay = 0
-lr = 0.005
-momentum=0
-
-train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)
-
-execution_id = 175
-optimizer = 'rmsprop'
-weight_decay = 0.000001
-lr = 0.0005
-
-train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)
-"""
-execution_id = 128
+execution_id = 0
 optimizer = 'sgd'
-weight_decay = 0.000001
-momentum = 0.9
-lr = 0.01
+learning_rates = [0.0001, 0.001, 0.01]
+decay_strats = [[10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 300], [40, 80, 100, 300]]
+weight_decays = [0.0001, 0.000001]
+momentums = [0.9, 0.5]
+nets = ['4x16', '8x8']
 
-train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)
+for lr in learning_rates:
+    for strat in decay_strats:
+        for wd in weight_decays:
+            for momentum in momentums:
+                for net in nets:
+                    network, train_data, test_data = get_network_and_data(net, 1)
+                    train_network(execution_id, ctx, network, epochs, strat, optimizer, lr, wd, momentum, train_data, test_data)
+                    ctx[0].empty_cache()
+                    gc.collect() 
+                    execution_id += 1
 
-execution_id = 125
-lr = 0.1
-
-train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)
-
-execution_id = 130
-lr = 0.001
-momentum = 0.5
-
-train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)
-
-network_tag = '4x16'
-execution_id = 79
-lr = 0.1
-
-train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)
-
-execution_id = 94
-lr = 0.1
-lr_decay_strategy = [40, 80, 100, 300]
-
-train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)
-
-optimizer = 'rmsprop'
-momentum = 0
-lr = 0.0005
-lr_decay_strategy = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 300]
-execution_id = 64
-weight_decay = 0.0001
-
-train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)
-
-execution_id = 66
-weight_decay = 0
-
-train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)
-
-optimizer = 'adam'
-execution_id = 34
-weight_decay = 0
-lr = 0.005
-
-train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, optimizer, lr, weight_decay, momentum)
