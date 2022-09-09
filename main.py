@@ -383,20 +383,20 @@ ctx = [mx.gpu(i) for i in range(num_gpus)]
 per_device_batch_size = 1
 num_workers = 1
 batch_size = per_device_batch_size * num_gpus
-epochs = 100
+epochs = 150
 
-execution_id = 0
+execution_id = 19
 optimizer = 'sgd'
-learning_rates = [0.0001, 0.001, 0.01]
-decay_strats = [[10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 300], [40, 80, 100, 300]]
-weight_decays = [0.0001, 0.000001]
+learning_rates = [0.0001, 0.0003, 0.001, 0.003] #0.0001, 
+decay_strats = [[20, 40, 60, 80, 100, 120, 140, 300], [40, 80, 100, 300], [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 300]]
+weight_decays = [0.0001]#, 0.000001]
 momentums = [0.9, 0.5]
-nets = ['4x16', '8x8']
+nets = ['4x16']#, '8x8']
 
-for lr in learning_rates:
+for wd in weight_decays:
     for strat in decay_strats:
-        for wd in weight_decays:
-            for momentum in momentums:
+        for momentum in momentums:
+            for lr in learning_rates:
                 for net in nets:
                     network, train_data, test_data = get_network_and_data(net, 1)
                     train_network(execution_id, ctx, network, epochs, strat, optimizer, lr, wd, momentum, train_data, test_data)
