@@ -10,4 +10,4 @@ Decption Detection is a task in which humans show outstanding difficulty, reachi
 
 ---
 
-This work is being further developed and a paper with the complete work should be written (in English) soon. Stay tuned!
+This project is being further developed and a paper with the complete work should be written (in English) soon. Stay tuned!
