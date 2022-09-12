@@ -1,6 +1,6 @@
 # SlowFastDeceptionDetection
 
-This repository has the code for my BSc Thesis (or Monograph, or Final Year Project, or "Trabalho de Conclusão de Curso", depending on how you might call it): "Video-based Deception Detection with Deep Learning". You can read the whole report [here](https://github.com/MahatKC/SlowFastDeceptionDetection/blob/master/Video-Based%20Deception%20Detection%20with%20Deep%20Learning.pdf).
+This repository has the code for my BSc Thesis (or Monograph, or Final Year Project, or "Trabalho de Conclusão de Curso", depending on how you might call it): "Video-based Deception Detection with Deep Learning". You can read the whole report [here](https://github.com/MahatKC/SlowFastDeceptionDetection/blob/master/Video-Based%20Deception%20Detection%20with%20Deep%20Learning.pdf) (in Portuguese).
 
 ---
 
@@ -10,4 +10,4 @@ Decption Detection is a task in which humans show outstanding difficulty, reachi
 
 ---
 
-This work is being further developed and a paper with the complete work should be written soon. Stay tuned!
+This work is being further developed and a paper with the complete work should be written (in English) soon. Stay tuned!
