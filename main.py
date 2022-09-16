@@ -385,48 +385,21 @@ num_workers = 1
 batch_size = per_device_batch_size * num_gpus
 
 epochs = 300
-execution_id = 63
-strat = [40, 80, 100, 400]
+execution_id = 70
 optimizer = 'adam'
 net = '4x16'
-
-wd = 0.0001
 lr = 0.00001
-
-network, train_data, test_data = get_network_and_data(net, 1)
-train_network(execution_id, ctx, network, epochs, strat, optimizer, lr, wd, 0.9, train_data, test_data)
-ctx[0].empty_cache()
-gc.collect() 
-execution_id += 1
-
-epochs = 100
-learning_rates = [0.000001, 0.00003]
-wd = 0.0001
-
-for lr in learning_rates:
-    network, train_data, test_data = get_network_and_data(net, 1)
-    train_network(execution_id, ctx, network, epochs, strat, optimizer, lr, wd, 0.9, train_data, test_data)
-    ctx[0].empty_cache()
-    gc.collect() 
-    execution_id += 1
-        
-lr = 0.00001
-weight_decays = [0.01, 0.000001]
+weight_decays = [0.01, 0.0001, 0.000001]
+decay_strats = [[400], [40, 80, 100, 400], [50, 200]]
 
 for wd in weight_decays:
-    network, train_data, test_data = get_network_and_data(net, 1)
-    train_network(execution_id, ctx, network, epochs, strat, optimizer, lr, wd, 0.9, train_data, test_data)
-    ctx[0].empty_cache()
-    gc.collect() 
-    execution_id += 1
-        
-decay_strats = [[400], [50, 200]]
-wd = 0.0001
-lr = 0.00001 
+    for strat in decay_strats:
+        if wd == weight_decays[1] and strat == decay_strats[1]:
+            continue
+        else:
+            network, train_data, test_data = get_network_and_data(net, 1)
+            train_network(execution_id, ctx, network, epochs, strat, optimizer, lr, wd, 0.9, train_data, test_data)
+            ctx[0].empty_cache()
+            gc.collect() 
+            execution_id += 1
 
-for strat in decay_strats:
-    network, train_data, test_data = get_network_and_data(net, 1)
-    train_network(execution_id, ctx, network, epochs, strat, optimizer, lr, wd, 0.9, train_data, test_data)
-    ctx[0].empty_cache()
-    gc.collect() 
-    execution_id += 1
