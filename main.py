@@ -385,11 +385,11 @@ num_workers = 1
 batch_size = per_device_batch_size * num_gpus
 
 epochs = 300
-execution_id = 70
+execution_id = 73
 optimizer = 'adam'
 net = '4x16'
 lr = 0.00001
-weight_decays = [0.01, 0.0001, 0.000001]
+weight_decays = [0.0001, 0.000001]
 decay_strats = [[400], [40, 80, 100, 400], [50, 200]]
 
 for wd in weight_decays:
