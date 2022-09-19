@@ -390,7 +390,7 @@ optimizer = 'adam'
 net = '4x16'
 lr = 0.00001
 weight_decays = [0.0001, 0.000001]
-decay_strats = [[400], [40, 80, 100, 400], [50, 200]]
+decay_strats = [[400], [40, 80, 100, 400], [50, 200, 400]]
 
 for wd in weight_decays:
     for strat in decay_strats:
