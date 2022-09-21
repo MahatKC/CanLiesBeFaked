@@ -356,20 +356,18 @@ def get_network_and_data(network_config, fold_idx):
 
 def train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay, momentum):
     final_test_acc = 0
-    if network_tag=='8x8':
-        duration = timedelta(minutes=675)
-    else:
-        duration = timedelta(minutes=440)
 
-    print(f"Execução {execution_id} iniciando às: {datetime.now()}. Previsão de término para às: {datetime.now()+duration}")
+    print(f"Execução {execution_id} iniciando às: {datetime.now()}.")
+    writer = SummaryWriter(log_dir='testsBoth/run'+str(execution_id))
     
-    with open('5FoldResultsBoL.txt', 'a') as results:
+    with open('5FoldResultsBoth.txt', 'a') as results:
         results.write('\nRun '+str(execution_id)+"\n")
         for i in range(5):
             network, train_data, test_data = get_network_and_data(network_tag, i)
             test_acc, cm = train_and_test_network(ctx, network, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay, momentum, train_data, test_data)
             ctx[0].empty_cache()
             gc.collect() 
+            writer.add_scalar('Accuracy/test', test_acc, i)
             final_test_acc += test_acc
             results.write('------Fold '+str(i)+" | Acuracia: "+str(test_acc)+'\n')
             results.write(str(cm))
@@ -378,28 +376,52 @@ def train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, 
         results.write("ACURACIA FINAL: "+str(final_test_acc/5)+'\n')
     print(f"ACURACIA FINAL: {final_test_acc/5}")
 
+    writer.close()
+    writer.flush()
+
 num_gpus = 1
 ctx = [mx.gpu(i) for i in range(num_gpus)]
 per_device_batch_size = 1
 num_workers = 1
 batch_size = per_device_batch_size * num_gpus
 
-epochs = 300
-execution_id = 73
-optimizer = 'adam'
 net = '4x16'
+optimizer = 'sgd'
+execution_id = 2
+epochs = 100
+
+lr = 0.0001
+momentum = 0.5
+wd = 0.0001
+strat = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 300]
+train_5_fold(execution_id, ctx, net, epochs, strat, optimizer, lr, wd, momentum)
+
+execution_id = 29
+epochs = 150
+
+lr = 0.001
+momentum = 0.9
+strat = [40, 80, 100, 300]
+train_5_fold(execution_id, ctx, net, epochs, strat, optimizer, lr, wd, momentum)
+
+optimizer = 'adam'
+execution_id = 74
+epochs = 150
+
 lr = 0.00001
-weight_decays = [0.0001, 0.000001]
-decay_strats = [[400], [40, 80, 100, 400], [50, 200, 400]]
+wd = 0.0001
+strat = [40, 80, 100, 400]
+train_5_fold(execution_id, ctx, net, epochs, strat, optimizer, lr, wd, momentum)
 
-for wd in weight_decays:
-    for strat in decay_strats:
-        if wd == weight_decays[1] and strat == decay_strats[1]:
-            continue
-        else:
-            network, train_data, test_data = get_network_and_data(net, 1)
-            train_network(execution_id, ctx, network, epochs, strat, optimizer, lr, wd, 0.9, train_data, test_data)
-            ctx[0].empty_cache()
-            gc.collect() 
-            execution_id += 1
+execution_id = 71
+epochs = 175
 
+strat = [400]
+train_5_fold(execution_id, ctx, net, epochs, strat, optimizer, lr, wd, momentum)
+
+execution_id = 73
+epochs = 200
+
+wd = 0.01
+strat = [40, 80, 100, 400]
+train_5_fold(execution_id, ctx, net, epochs, strat, optimizer, lr, wd, momentum)
