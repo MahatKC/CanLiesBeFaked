@@ -4,10 +4,16 @@
 /first_gluon_test.py
 /first_train_test.ipynb
 /runs
-*.txt
 5_fold_maker.py
 runsF/*
 *.mp4
 runsBoL/*
 Box of Lies Vids/videos_by_individuals_no_jimmy.csv
 runsBoth/*
+testsBoth/*
+Both Datasets/*
+Box of Lies Vids/*
+Real-life_Deception_Detection_2016/*
+test.txt
+train.txt
+val.txt
