@@ -341,33 +341,88 @@ def load_folds(fold_index, length):
 
     return train_data, test_data
 
-def get_network_and_data(network_config, fold_idx):
+def load_folds_mixed_BOL(fold_index, length):
+    transform_train = video.VideoGroupTrainTransform(size=(224, 224), scale_ratios=[1.0, 0.8], mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    
+    train_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Both Datasets/Clips'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Mixed BOL Folds/train_with_fold_'+str(fold_index)+'_as_test.txt'),
+                                train=True,
+                                new_length=length,
+                                video_loader=True,
+                                slowfast = True,
+                                use_decord=True,
+                                transform=transform_train)
+                
+    test_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Both Datasets/Clips'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Mixed BOL Folds/fold_'+str(fold_index)+'.txt'),
+                                train=False,
+                                new_length=length,
+                                video_loader=True,
+                                slowfast = True,
+                                use_decord=True,
+                                transform=transform_train)
+
+    train_data = gluon.data.DataLoader(train_dataset, batch_size=batch_size,
+                                    shuffle=True, num_workers=num_workers)
+    test_data = gluon.data.DataLoader(test_dataset, batch_size=batch_size,
+                                    shuffle=True, num_workers=num_workers)
+
+    return train_data, test_data
+
+def load_folds_mixed_RLT(fold_index, length):
+    transform_train = video.VideoGroupTrainTransform(size=(224, 224), scale_ratios=[1.0, 0.8], mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    
+    train_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Both Datasets/Clips'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Mixed RLT Folds/train_with_fold_'+str(fold_index)+'_as_test.txt'),
+                                train=True,
+                                new_length=length,
+                                video_loader=True,
+                                slowfast = True,
+                                use_decord=True,
+                                transform=transform_train)
+                
+    test_dataset = VideoClsCustom(root=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Both Datasets/Clips'),
+                                setting=os.path.expanduser('/home/petcomp/TCC Mahat/Projeto/Mixed RLT Folds/fold_'+str(fold_index)+'.txt'),
+                                train=False,
+                                new_length=length,
+                                video_loader=True,
+                                slowfast = True,
+                                use_decord=True,
+                                transform=transform_train)
+
+    train_data = gluon.data.DataLoader(train_dataset, batch_size=batch_size,
+                                    shuffle=True, num_workers=num_workers)
+    test_data = gluon.data.DataLoader(test_dataset, batch_size=batch_size,
+                                    shuffle=True, num_workers=num_workers)
+
+    return train_data, test_data
+
+def get_network_and_data(test_tag, network_config, fold_idx):
     if network_config=='8x8':
         network = 'slowfast_8x8_resnet50_kinetics400'
         train_data, test_data = load_folds(fold_idx, 128)
     elif network_config=='4x16':
         network = 'slowfast_4x16_resnet50_kinetics400'
-        train_data, test_data = load_folds(fold_idx, 64)
+        if test_tag == 'bol':
+            train_data, test_data = load_folds_mixed_BOL(fold_idx, 64)
+        else:
+            train_data, test_data = load_folds_mixed_RLT(fold_idx, 64)
     else:
         print("ERRO")
         network, train_data, test_data = '','',''
     
     return network, train_data, test_data
 
-def train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay, momentum):
+def train_5_fold(test_tag, execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay, momentum):
     final_test_acc = 0
-
-    print(f"Execução {execution_id} iniciando às: {datetime.now()}.")
-    writer = SummaryWriter(log_dir='testsBoth/run'+str(execution_id))
     
-    with open('5FoldResultsBoth.txt', 'a') as results:
+    with open('5FoldResultsMixed.txt', 'a') as results:
         results.write('\nRun '+str(execution_id)+"\n")
         for i in range(5):
-            network, train_data, test_data = get_network_and_data(network_tag, i)
+            network, train_data, test_data = get_network_and_data(test_tag, network_tag, i)
             test_acc, cm = train_and_test_network(ctx, network, num_epochs, lr_decay_strategy, chosen_optimizer, lr, weight_decay, momentum, train_data, test_data)
             ctx[0].empty_cache()
-            gc.collect() 
-            writer.add_scalar('Accuracy/test', test_acc, i)
+            gc.collect()
             final_test_acc += test_acc
             results.write('------Fold '+str(i)+" | Acuracia: "+str(test_acc)+'\n')
             results.write(str(cm))
@@ -376,52 +431,14 @@ def train_5_fold(execution_id, ctx, network_tag, num_epochs, lr_decay_strategy, 
         results.write("ACURACIA FINAL: "+str(final_test_acc/5)+'\n')
     print(f"ACURACIA FINAL: {final_test_acc/5}")
 
-    writer.close()
-    writer.flush()
-
 num_gpus = 1
 ctx = [mx.gpu(i) for i in range(num_gpus)]
 per_device_batch_size = 1
 num_workers = 1
 batch_size = per_device_batch_size * num_gpus
 
-net = '4x16'
-optimizer = 'sgd'
-execution_id = 2
-epochs = 100
+#5 fold testing in RLT
+train_5_fold('rlt', 1, ctx, '4x16', 200, [500], 'adam', 0.00001, 0.0001, 0.9)
 
-lr = 0.0001
-momentum = 0.5
-wd = 0.0001
-strat = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 300]
-train_5_fold(execution_id, ctx, net, epochs, strat, optimizer, lr, wd, momentum)
-
-execution_id = 29
-epochs = 150
-
-lr = 0.001
-momentum = 0.9
-strat = [40, 80, 100, 300]
-train_5_fold(execution_id, ctx, net, epochs, strat, optimizer, lr, wd, momentum)
-
-optimizer = 'adam'
-execution_id = 74
-epochs = 150
-
-lr = 0.00001
-wd = 0.0001
-strat = [40, 80, 100, 400]
-train_5_fold(execution_id, ctx, net, epochs, strat, optimizer, lr, wd, momentum)
-
-execution_id = 71
-epochs = 175
-
-strat = [400]
-train_5_fold(execution_id, ctx, net, epochs, strat, optimizer, lr, wd, momentum)
-
-execution_id = 73
-epochs = 200
-
-wd = 0.01
-strat = [40, 80, 100, 400]
-train_5_fold(execution_id, ctx, net, epochs, strat, optimizer, lr, wd, momentum)
+#5 fold testing in bol
+train_5_fold('bol', 2, ctx, '4x16', 200, [500], 'adam', 0.00001, 0.0001, 0.9)
