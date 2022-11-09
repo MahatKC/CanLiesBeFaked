@@ -1,21 +1,20 @@
-/Real-life_Deception_Detection_2016/Annotation
-/Real-life_Deception_Detection_2016/Clips
-/Real-life_Deception_Detection_2016/Transcription
-/first_gluon_test.py
-/first_train_test.ipynb
-/runs
-5_fold_maker.py
-runsF/*
-*.mp4
-runsBoL/*
-Box of Lies Vids/videos_by_individuals_no_jimmy.csv
-runsBoth/*
-testsBoth/*
-Both Datasets/*
-Box of Lies Vids/*
-Real-life_Deception_Detection_2016/*
+Code/Both Datasets/*
+!videos_by_individuals.csv
+Code/Box of Lies Vids/*
+!whole_bol.txt
+!videos_by_individuals.csv
+Code/Real-life_Deception_Detection_2016/*
+!videos_by_individuals.csv
+!whole_rlt.txt
+Code/Mixed BOL Folds
+Code/Mixed RLT Folds
+
 test.txt
 train.txt
 val.txt
-Mixed BOL Folds/*
-Mixed RLT Folds/*
+
+Results/runs
+Results/runsF
+Results/runsBoL
+Results/runsBoth
+Results/testsBoth

@@ -36,8 +36,6 @@ def save_to_csv(execution_id, learning_rate, lr_decay_strategy, optimizer, momen
         file_df.to_csv("hyperparameter_search_both_datasets.csv",index=False)
     else:
         results_df.to_csv("hyperparameter_search_both_datasets.csv",index=False)
-    
-    pass
 
 def train_network(execution_id, ctx, network, epochs, lr_decay_epoch, optimizer, learning_rate, weight_decay, momentum, train_data, test_data):
     net = get_model(name=network, nclass=2)
