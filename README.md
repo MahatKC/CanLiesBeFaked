@@ -4,7 +4,7 @@ This repository was created for my BSc Thesis (or Monograph, or Final Year Proje
 
 However, the project was developed further and a paper which is currently in pre-print has been written based on the Thesis: "Can lies be faked? Comparing low-stakes and high-stakes deception video datasets from a Machine Learning perspective".
 
-This repository is organized as follows: Code folder has the code used to run experiments and has instructions on how to organize the datasets so experiments run properly; Results folder has the CSV files with the results of each of the runs performed during the hyperparameter search phase, as well as TXT files with detailed results from 5-Fold testing.
+This repository is organized as follows: **Code** folder has the code used to run experiments and has instructions on how to organize the datasets so experiments run properly; **Results** folder has the CSV files with the results of each of the runs performed during the hyperparameter search phase, as well as TXT files with detailed results from 5-Fold testing.
 
 ---
 
