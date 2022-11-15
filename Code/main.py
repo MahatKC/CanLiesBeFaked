@@ -3,7 +3,6 @@ import time, gc, os
 import pandas as pd
 import numpy as np
 from os.path import exists
-from pathlib import Path
 
 from torch.utils.tensorboard import SummaryWriter
 from sklearn.metrics import confusion_matrix
@@ -16,8 +15,6 @@ from gluoncv.data.transforms import video
 from gluoncv.data import VideoClsCustom
 from gluoncv.model_zoo import get_model
 from gluoncv.utils import split_and_load
-
-upper_dir = Path(os.getcwd()).parents[0]
 
 def save_to_csv(run_tag, execution_id, learning_rate, decay_strategy, optimizer, momentum, wd, network, epochs, acc, val_acc):
     results_df = pd.DataFrame({
