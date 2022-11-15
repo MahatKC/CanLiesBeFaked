@@ -130,7 +130,6 @@ def train_network(is_hyperparam_search, network, run_tag, train_data, test_data,
             if epoch%20==0:
                 print(f'[Epoch {epoch}] train={acc} val={val_acc} loss={train_loss/(i+1)} time: {time.time()-tic}')
 
-
     if is_hyperparam_search:
         save_to_csv(run_tag, execution_id, learning_rate, lr_decay_epoch, optimizer, momentum, wd, network, epochs, acc, val_acc)
 
