@@ -1,9 +1,12 @@
-from cv2 import add
 import pandas as pd
 import numpy as np
+import os
+from pathlib import Path
+
+upper_dir = Path(os.getcwd()).parents[0]
 
 def write_set_to_file(set, set_name):
-    with open("Real-life_Deception_Detection_2016/"+set_name+".txt", "w") as f:
+    with open(str(upper_dir)+"/Real-life_Deception_Detection_2016/"+set_name+".txt", "w") as f:
         for element in set:
             if element == set[-1]:
                 skip_line = ""
@@ -14,6 +17,21 @@ def write_set_to_file(set, set_name):
             else:
                 f.write(element+" 500 0"+skip_line)
         f.close()
+
+def training_files():
+
+    filenames = ['fold_0.txt', 'fold_1.txt', 'fold_2.txt', 'fold_3.txt', 'fold_4.txt']
+
+    for i in range(5):
+        with open(str(upper_dir)+"/Real-life_Deception_Detection_2016/train_with_fold_"+str(i)+"_as_test.txt", 'w') as outfile:
+            for fname in filenames:
+                if fname == 'fold_'+str(i)+'.txt':
+                    continue
+                else:
+                    with open(str(upper_dir)+"/Real-life_Deception_Detection_2016/"+fname) as infile:
+                        for line in infile:
+                            outfile.write(line)
+                        outfile.write('\n')
 
 def reset(df, chosen_individuals, fold_counts, lie_counts, truth_counts, fold_vids):
     chosen_individuals = []
@@ -26,7 +44,7 @@ def reset(df, chosen_individuals, fold_counts, lie_counts, truth_counts, fold_vi
 
 if __name__=="__main__":
     #reads CSV with the list of videos x individuals and randomizes it so proper train, val and test txt files are created
-    df = pd.read_csv("Real-life_Deception_Detection_2016/videos_by_individuals.csv")
+    df = pd.read_csv(str(upper_dir)+"/Real-life_Deception_Detection_2016/videos_by_individuals.csv")
     files_list = df['FILE'].values.tolist()
     files = []
     for file in files_list:
@@ -94,4 +112,5 @@ if __name__=="__main__":
         fold_vid.sort()
             
     for i in range(5):
-        write_set_to_file(fold_vids[i], "foldBF_"+str(i))
+        write_set_to_file(fold_vids[i], "fold_"+str(i))
+    training_files()

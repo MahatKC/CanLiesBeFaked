@@ -1,6 +1,10 @@
 import pandas as pd
+import os
+from pathlib import Path
 
-df = pd.read_csv("Both Datasets/videos_by_individuals.csv")
+upper_dir = Path(os.getcwd()).parents[0]
+
+df = pd.read_csv(str(upper_dir)+"/Both Datasets/videos_by_individuals.csv")
 files_list = df['FILE'].values.tolist()
 individuals_list = df['INDIVIDUAL'].values.tolist()
 
@@ -8,7 +12,7 @@ folds = []
 
 for i in range(5):
     fold = []
-    with open("Both Datasets/fold_"+str(i)+".txt", "r") as f:
+    with open(str(upper_dir)+"/Both Datasets/fold_"+str(i)+".txt", "r") as f:
         for line in f:
             x = line.split(' ')
             video = x[0][:-4]
