@@ -19,7 +19,7 @@ from gluoncv.utils import split_and_load
 
 upper_dir = Path(os.getcwd()).parents[0]
 
-def save_to_csv(execution_id, learning_rate, decay_strategy, optimizer, momentum, wd, network, epochs, acc, val_acc):
+def save_to_csv(run_tag, execution_id, learning_rate, decay_strategy, optimizer, momentum, wd, network, epochs, acc, val_acc):
     results_df = pd.DataFrame({
         'execution_id': [str(execution_id)],
         'learning_rate' : [str(learning_rate)],
@@ -33,12 +33,12 @@ def save_to_csv(execution_id, learning_rate, decay_strategy, optimizer, momentum
         'val_acc': [str(val_acc)]
     })
 
-    if exists("hyperparameter_search_both_datasets.csv"):
-        file_df = pd.read_csv("hyperparameter_search_both_datasets.csv")
+    if exists("hyperparameter_search_"+run_tag+".csv"):
+        file_df = pd.read_csv("hyperparameter_search_"+run_tag+".csv")
         file_df = pd.concat([file_df,results_df], ignore_index=True)
-        file_df.to_csv("hyperparameter_search_both_datasets.csv",index=False)
+        file_df.to_csv("hyperparameter_search_"+run_tag+".csv",index=False)
     else:
-        results_df.to_csv("hyperparameter_search_both_datasets.csv",index=False)
+        results_df.to_csv("hyperparameter_search_"+run_tag+".csv",index=False)
 
 def train_network(is_hyperparam_search, network, run_tag, train_data, test_data, training_params):
     execution_id = training_params[0]
@@ -135,7 +135,7 @@ def train_network(is_hyperparam_search, network, run_tag, train_data, test_data,
 
 
     if is_hyperparam_search:
-        save_to_csv(execution_id, learning_rate, lr_decay_epoch, optimizer, momentum, wd, network, epochs, acc, val_acc)
+        save_to_csv(run_tag, execution_id, learning_rate, lr_decay_epoch, optimizer, momentum, wd, network, epochs, acc, val_acc)
 
         writer.close()
         writer.flush()
