@@ -1,4 +1,4 @@
-execution_id,learning_rate,lr_decay_strategy,optimizer,momentum,wd,network,epochs,training_acc,val_acc
+execution_id,learning_rate,decay_strategy,optimizer,momentum,wd,network,epochs,training_acc,val_acc
 0,0.0001,"[10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 300]",sgd,0.9,0.0001,slowfast_4x16_resnet50_kinetics400,100,0.5169230769230769,0.547037037037037
 1,0.0001,"[10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 300]",sgd,0.9,0.0001,slowfast_8x8_resnet50_kinetics400,100,0.5692307692307692,0.4993827160493827
 2,0.0001,"[10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 300]",sgd,0.5,0.0001,slowfast_4x16_resnet50_kinetics400,100,0.4984615384615384,0.5767901234567901
