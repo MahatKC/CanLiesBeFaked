@@ -2,7 +2,7 @@
 
 This repository was created for my BSc Thesis (or Monograph, or Final Year Project, or "Trabalho de Conclusão de Curso", depending on how you might call it): "Video-based Deception Detection with Deep Learning". You can read the whole Thesis [here](https://github.com/MahatKC/SlowFastDeceptionDetection/blob/master/Video-Based%20Deception%20Detection%20with%20Deep%20Learning.pdf) (in Portuguese).
 
-However, the project was developed further and a paper which is currently in pre-print has been written based on the Thesis: "Can lies be faked? Comparing low-stakes and high-stakes deception video datasets from a Machine Learning perspective".
+However, the project was developed further and a paper [which is currently in pre-print](https://arxiv.org/abs/2211.13035) has been written based on the Thesis: "Can lies be faked? Comparing low-stakes and high-stakes deception video datasets from a Machine Learning perspective".
 
 This repository is organized as follows: **Code** folder has the code used to run experiments and has instructions on how to organize the datasets so experiments run properly; **Results** folder has the CSV files with the results of each of the runs performed during the hyperparameter search phase, as well as TXT files with detailed results from 5-Fold testing.
 
